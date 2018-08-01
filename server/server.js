@@ -1,11 +1,22 @@
+// var env = process.env.NODE_ENV || 'development';
+//
+// if(env ===  'development'){
+//     process.env.PORT = 3000;
+//     process.env.MONGODB_URI = 'mongodb://localhost: 27017/TodoApp';
+// }else if(env === 'test'){
+//     process.env.PORT = 3000;
+//     process.env.MONGODB_URI = 'mongodb://localhost: 27017/Tod
+
 const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
+const {jwt} = require('jsonwebtoken');
 
 var {mongoose} = require('./db/mongoose.js');
 var {Todo} = require('./models/todo.js');
 var {User} = require('./models/user.js');
+var {authenticate} = require('./middlewares/authenticate');
 
 var app = express();
 
@@ -90,6 +101,24 @@ app.patch('/todos/:id' , (req, res) => {
     }).catch((e) => {
         res.status(400).send();
     });
+});
+
+app.post('/users' , (req, res) => {
+    var body = _.pick(req.body, ['email' , 'password']);
+    var user = new User(body);
+
+    user.save().then(() => {
+        return user.generateAuthToken();
+    }).then((token) => {
+        res.header('x-auth', token).send(user);
+    }).catch((e) => {
+        res.status(400).send(e);
+    });
+});
+
+
+app.get('/users/me',authenticate, (req, res) => {
+ res.send(req.user);
 });
 
 app.listen(3000, () => {
